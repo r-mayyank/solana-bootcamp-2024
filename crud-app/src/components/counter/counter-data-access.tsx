@@ -16,7 +16,7 @@ export interface CreateEntryArgs {
   owder: PublicKey 
 }
 
-export function useCounterProgram() {
+export function useCrudProgram() {
   const { connection } = useConnection()
   const { cluster } = useCluster()
   const transactionToast = useTransactionToast()
@@ -36,7 +36,7 @@ export function useCounterProgram() {
 
   const createEntry = useMutation<string, Error, CreateEntryArgs>({
     mutationKey: [`jounal-entry`, 'create', { cluster }],
-    mutationFn: async ({ title, message, owner }) => {
+    mutationFn: async ({ title, message }) => {
       return program.methods.createJournalEntry(title, message).rpc();
     },
     onSuccess: (signature) => {
@@ -58,19 +58,61 @@ export function useCounterProgram() {
   }
 }
 
-export function useCounterProgramAccount({ account }: { account: PublicKey }) {
+export function useCrudProgramAccount({ account }: { account: PublicKey }) {
   const { cluster } = useCluster()
   const transactionToast = useTransactionToast()
-  const { program, accounts } = useCounterProgram()
+  const { program, accounts } = useCrudProgram()
+  const provider = useAnchorProvider()
 
   const accountQuery = useQuery({
     queryKey: ['counter', 'fetch', { cluster, account }],
     queryFn: () => program.account.journalEntryState.fetch(account),
   })
 
-  const createEntry = useMutation<string, Error, CreateEntryArgs>
+  const updateEntry = useMutation<string, Error, { title: string; message: string }>({
+    mutationKey: [`jounal-entry`, 'update', { cluster, account }],
+    mutationFn: async ({ title, message }) => {
+      return program.methods.updateJournalEntry(title, message)
+        .accountsPartial({
+          journalEntry: account, 
+          owner: provider.wallet.publicKey
+        })
+        .rpc();
+    },
+    onSuccess: (signature) => {
+      transactionToast(signature)
+      toast.success('Journal Entry Updated')
+      accounts.refetch();
+      accountQuery.refetch();
+    },
+    onError: (error) => {
+      toast.error(`Error updating journal entry: ${error.message}`)
+    }
+  });
+
+  const deleteEntry = useMutation({
+    mutationKey: [`jounal-entry`, 'delete', { cluster, account }],
+    mutationFn: async (title: string) => {
+      return program.methods.deleteJournalEntry(title)
+        .accountsPartial({
+          journalEntry: account,
+          owner: provider.wallet.publicKey,
+        })
+        .rpc();
+    },
+    onSuccess: (signature) => {
+      transactionToast(signature)
+      toast.success('Journal Entry Deleted')
+      accounts.refetch();
+    },
+    onError: (error) => {
+      toast.error(`Error deleting journal entry: ${error.message}`)
+    }
+  });
 
   return {
     accountQuery,
+    updateEntry,
+    deleteEntry,
   }
 }
