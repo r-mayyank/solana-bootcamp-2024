@@ -1,19 +1,19 @@
 #![allow(clippy::result_large_err)]
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint};
+use anchor_spl::token::Mint;
 
 declare_id!("FqzkXZdwYjurnUKetJCAvaUw5WAqbwzU6gZEwydeEfqS");
 
 #[program]
-pub mod vesting {
+pub mod counter {
     use super::*;
-
-    pub fn create_vesting_account(ctx: Context<CreateVestingAccount>, company_name: String) -> Result<()> {
+      pub fn create_vesting_account(ctx: Context<CreateVestingAccount>, company_name: String) -> Result<()> {
 
         Ok(())
     }
 }
+
 
 #[derive(Accounts)]
 #[instruction(company_name: String)]
@@ -28,11 +28,12 @@ pub struct CreateVestingAccount<'info> {
         seeds = [company_name.as_ref()],
         bump
     )]
-    pub vesting_account: Box<Account<'info, VestingAccount>>,
+    pub vesting_account: Account<'info, VestingAccount>,
 
     pub mint: InterfaceAccount<'info, Mint>,
 
     pub token_program: Program<'info, anchor_spl::token::Token>,
+    pub system_program: Program<'info, System>,
 }
 
 #[account]
